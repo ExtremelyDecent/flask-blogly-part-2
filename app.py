@@ -2,7 +2,7 @@
 
 from flask import Flask, request, redirect, render_template
 from flask_debugtoolbar import DebugToolbarExtension
-from models import db, connect_db, User
+from models import db, connect_db, User, Post
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///blogly'
@@ -21,6 +21,7 @@ def root():
     
     return redirect('/users')
 
+#########################USER ROUTE
 @app.route('/users')
 def users_index():
     """ shows page with all users listed"""
@@ -43,8 +44,16 @@ def users_new():
 
     db.session.add(new_user)
     db.session.commit()
+    flash(f"User {new_user.full_name} added.")
 
     return redirect('/users')
+
+    
+@app.errorhandler(404)
+def page_not_found(e):
+    """404 for not found page"""
+    return render_template('404.html')
+
 
 @app.route('/users/<int:user_id>')
 def users_show(user_id):
