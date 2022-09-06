@@ -1,6 +1,6 @@
 """Blogly application."""
 
-from flask import Flask, request, redirect, render_template
+from flask import Flask, request, redirect, render_template, flash
 from flask_debugtoolbar import DebugToolbarExtension
 from models import db, connect_db, User, Post
 
@@ -17,9 +17,11 @@ db.create_all()
 
 @app.route('/')
 def root():
-    """Homepage redirects to user homepage with users list"""
+    """Shows recent posts from users with homepage"""
     
-    return redirect('/users')
+    posts = Post.query.order_by(Post.created_at.desc()).limit(5).all()
+    return render_template("posts/homepage.html", posts=posts)
+
 
 @app.errorhandler(404)
 def page_not_found(e):
@@ -69,13 +71,17 @@ def users_edit(user_id):
     return render_template('users/edit.html', user=user)
 
 @app.route('/users/<int:user_id>/edit', methods=["POST"])
-def users_upade(user_id):
+def users_update(user_id):
     """Handles form submission for updating existing user info"""
 
     user = User.query.get_or_404(user_id)
-    user.first_name=request.form['first_name'],
-    user.last_name=request.form['last_name'],
+    user.first_name=request.form['first_name']
+    user.last_name=request.form['last_name']
     user.image_url=request.form['image_url']
+
+    db.session.add(user)
+    db.session.commit()
+    flash(f"User {user.full_name} edited.   ")
 
     return redirect('/users')
 
@@ -86,7 +92,7 @@ def users_delete(user_id):
     user = User.query.get_or_404(user_id)
     db.session.delete(user)
     db.session.commit()
-    flash(f"User {new_user.full_name} deleted.")
+    flash(f"User {user.full_name} deleted.")
 
     return redirect('/users')
 
@@ -101,12 +107,10 @@ def posts_new_form(user_id):
     return render_template('posts/new.html', user= user)
 
 @app.route('/users/<int:user_id>/posts/new', methods=["POST"])
-def posts_new_form(user_id):
+def posts_new(user_id):
     """Form sumbmission from user post form"""
     user = User.query.get_or_404(user_id)
-    new_post = Post(title = request.form['title'],
-        content = request.form['content'],
-        user = user)
+    new_post = Post(title = request.form['title'], content = request.form['content'], user = user)
 
     db.session.add(new_post)
     db.session.commit()
@@ -132,7 +136,7 @@ def posts_edit(post_id):
 
 
 @app.route('/posts/<int:post_id>/edit', methods = ["POST"])
-def posts_edit(post_id):
+def posts_update(post_id):
     """Handle form submission to edit a post"""
 
     post = Post.query.get_or_404(post_id)
@@ -140,7 +144,7 @@ def posts_edit(post_id):
     post.content = request.form['content']
 
     db.session.add(post)
-    db.sesion.commit()
+    db.session.commit()
 
     flash(f"Post '{post.title}' edited.")
 
@@ -148,12 +152,13 @@ def posts_edit(post_id):
 
 
 @app.route('/posts/<int:post_id>/delete', methods = ["POST"])
-def posts_edit(post_id):
+def posts_delete(post_id):
     """Handle form submission for deleting a post"""
 
+    post = Post.query.get_or_404(post_id)
 
     db.session.delete(post)
-    db.sesion.commit()
+    db.session.commit()
 
     flash(f"Post '{post.title}' deleted.")
 
